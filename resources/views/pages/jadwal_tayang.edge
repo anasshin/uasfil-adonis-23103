@@ -1,0 +1,323 @@
+@layout.app({ title: 'Manajemen Jadwal Tayang' })
+
+  @slot('meta')
+    <meta name="description" content="Halaman manajemen jadwal tayang film" />
+  @end
+  
+  @slot('main')
+    <!-- Header -->
+    <div class="text-center mb-6">
+      <h1 class="text-3xl font-bold">
+        Manajemen Jadwal Tayang
+      </h1>
+    </div>
+
+    <!-- Search & Add Button -->
+    <div class="mb-6 pb-2">
+      <div class="flex justify-between w-full">
+        <div class="flex flex-col w-full max-w-md">
+          <label class="label">
+            <span class="label-text font-medium">Cari Film</span>
+          </label>
+          <form method="GET" action="/jadwal" class="join mt-2">
+            <input
+              type="text"
+              name="search"
+              value="{{ search }}"
+              placeholder="Cari berdasarkan judul atau sutradara"
+              class="input input-bordered border-2 join-item w-full"
+            />
+            <button type="submit" class="btn btn-outline join-item">Clear</button>
+          </form>
+        </div>
+        <button onclick="openModal()" class="btn btn-primary">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-5 w-5 mr-2"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Tambah Jadwal
+      </button>
+      </div>
+    </div>
+
+    <!-- Toast Success -->
+    @if(flashMessages.has('message'))
+      <div class="toast toast-end z-50">
+        <div class="alert alert-success bg-green-900 border-green-700 text-green-100">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="stroke-current shrink-0 h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <span>{{ flashMessages.get('message') }}</span>
+        </div>
+      </div>
+    @endif
+    
+    <!-- Toast Error -->
+    @if(flashMessages.has('error'))
+      <div class="toast toast-end z-50">
+        <div class="alert alert-error bg-red-900 border-red-700 text-red-100">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="stroke-current shrink-0 h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+            />
+          </svg>
+          <span>{{ flashMessages.get('error') }}</span>
+        </div>
+      </div>
+    @endif
+    
+    <!-- Table -->
+    <div class="overflow-x-auto shadow">
+      <table class="table table-zebra w-full">
+        <thead>
+          <tr>
+            <th>
+              No
+            </th>
+            <th>
+              Film
+            </th>
+            <th>
+              Studio
+            </th>
+            <th>
+              Tanggal
+            </th>
+            <th>
+              Jam
+            </th>
+            <th>
+              Aksi
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          @each(jadwal in jadwals)
+            <tr>
+              <td>
+                {{ (jadwals.currentPage - 1) * jadwals.perPage + 1 }}
+              </td>
+              <td>
+                <div class="font-semibold">
+                  {{ jadwal.film.judul }}
+                </div>
+                <div class="flex justify-between">
+                  <div class="text-sm text-gray-500">
+                    {{ jadwal.film.sutradara }}
+                  </div>
+                  <div class="text-xs badge badge-outline badge-info text-gray-400">
+                    {{ jadwal.film.tahun }}
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div class="font-medium">
+                  {{ jadwal.studio.nama_studio }}
+                </div>
+                <div class="text-sm text-gray-500">
+                  Kapasitas: {{ jadwal.studio.kapasitas }}
+                </div>
+              </td>
+              <td>
+                {{ new Date(jadwal.tanggal).toLocaleDateString('id-ID') }}
+              </td>
+              <td>
+                {{ jadwal.jam }}
+              </td>
+              <td>
+                <div class="flex space-x-2">
+                  <button
+                    onclick="editJadwal({{ jadwal.id }}, '{{ jadwal.film_id }}', '{{ jadwal.studio_id }}', '{{ jadwal.tanggal }}', '{{ jadwal.jam }}')"
+                    class="btn btn-sm btn-outline btn-warning"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      class="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      />
+                    </svg>
+                  </button>
+                  <form
+                    method="POST"
+                    action="/jadwal/{{ jadwal.id }}/delete"
+                    style="display:inline;"
+                    onsubmit="return confirm('Apakah Anda yakin ingin menghapus jadwal ini?')"
+                  >
+                    {{ csrfField() }}
+                  <button type="submit" class="btn btn-sm btn-outline btn-error">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-4 w-4"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        />
+                      </svg>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          @else
+            <tr>
+              <td colspan="6" class="text-center py-8 text-gray-500">
+                Tidak ada data jadwal tayang ditemukan
+              </td>
+            </tr>
+          @endeach
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="mt-6">
+      @each(link in jadwals.getUrlsForRange(1, jadwals.lastPage))
+        <a href="{{ link.url }}" class="btn {{ link.isActive ? 'btn-primary' : 'btn-outline' }}">{{ link.page }}</a>
+      @endeach
+    </div>
+
+    <!-- Modal -->
+    <dialog id="jadwalModal" class="modal">
+      <div class="modal-box w-11/12 max-w-2xl">
+        <h3 class="font-bold text-lg mb-4" id="modalTitle">
+          Tambah Jadwal Tayang Baru
+        </h3>
+        <form id="jadwalForm" method="POST" action="/jadwal">
+          {{ csrfField() }}
+        <input type="hidden" name="_method" value="POST" id="methodField" />
+          <input type="hidden" name="jadwal_id" id="jadwal_id" />
+
+          <div class="form-control w-full mb-4">
+            <label class="label pb-2">
+              <span class="label-text font-medium">Film</span>
+            </label>
+            <select name="film_id" id="film_id" class="select select-bordered w-full" required>
+              <option value="">
+                Pilih Film
+              </option>
+              @each(film in films)
+                <option value="{{ film.id }}">
+                  {{ film.judul }} ({{ film.tahun }})
+                </option>
+              @endeach
+            </select>
+          </div>
+
+          <div class="form-control w-full mb-4">
+            <label class="label pb-2">
+              <span class="label-text font-medium">Studio</span>
+            </label>
+            <select name="studio_id" id="studio_id" class="select select-bordered w-full" required>
+              <option value="">
+                Pilih Studio
+              </option>
+              @each(studio in studios)
+                <option value="{{ studio.id }}">
+                  {{ studio.nama_studio }} (Kapasitas: {{ studio.kapasitas }})
+                </option>
+              @endeach
+            </select>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="form-control w-full">
+              <label class="label pb-2">
+                <span class="label-text font-medium">Tanggal Tayang</span>
+              </label>
+              <input
+                type="date"
+                name="tanggal"
+                id="tanggal"
+                class="input input-bordered w-full"
+                min="{{ new Date().toISOString().slice(0,10) }}"
+                required
+              />
+            </div>
+            <div class="form-control w-full">
+              <label class="label pb-2">
+                <span class="label-text font-medium">Jam Tayang</span>
+              </label>
+              <input type="time" name="jam" id="jam" class="input input-bordered w-full" step="3600" required />
+            </div>
+          </div>
+
+          <div class="modal-action">
+            <button type="button" onclick="closeModal()" class="btn">Batal</button>
+            <button type="submit" class="btn btn-primary">Simpan</button>
+          </div>
+        </form>
+      </div>
+      <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+      </form>
+    </dialog>
+
+    <script>
+      function openModal() {
+        document.getElementById("jadwalModal").showModal();
+        resetForm();
+      }
+      
+      function closeModal() {
+        document.getElementById("jadwalModal").close();
+      }
+      
+      function resetForm() {
+        document.getElementById("jadwalForm").action = "/jadwal";
+        document.getElementById("methodField").value = "POST";
+        document.getElementById("modalTitle").textContent = "Tambah Jadwal Tayang Baru";
+        document.getElementById("jadwalForm").reset();
+        document.getElementById("jadwal_id").value = "";
+      }
+      
+      function editJadwal(id, filmId, studioId, tanggal, jam) {
+        document.getElementById("jadwalModal").showModal();
+        document.getElementById("jadwalForm").action = `/jadwal/${id}/update`;
+        document.getElementById("methodField").value = "POST";
+        document.getElementById("modalTitle").textContent = "Edit Jadwal Tayang";
+        document.getElementById("jadwal_id").value = id;
+        document.getElementById("film_id").value = filmId;
+        document.getElementById("studio_id").value = studioId;
+        document.getElementById("tanggal").value = tanggal;
+        document.getElementById("jam").value = jam;
+      }
+    </script>
+  @endslot
+@end

@@ -1,0 +1,352 @@
+@layout.app({ title: 'Pembelian Tiket' })
+
+  @slot('main')
+    <!-- Header -->
+    <div class="text-center mb-6">
+      <h1 class="text-3xl font-bold text-white">
+        Pembelian Tiket
+      </h1>
+      <div class="text-sm text-gray-400">
+        Buat tiket manual untuk setiap jadwal
+      </div>
+    </div>
+
+    <!-- Statistik -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+      <div class="stat bg-black shadow rounded-lg border border-gray-800">
+        <div class="stat-title text-gray-300">
+          Total Tiket
+        </div>
+        <div class="stat-value text-blue-400">
+          {{ stats.total_tiket }}
+        </div>
+      </div>
+      <div class="stat bg-black shadow rounded-lg border border-gray-800">
+        <div class="stat-title text-gray-300">
+          Terjual
+        </div>
+        <div class="stat-value text-green-400">
+          {{ stats.tiket_terjual }}
+        </div>
+      </div>
+      <div class="stat bg-black shadow rounded-lg border border-gray-800">
+        <div class="stat-title text-gray-300">
+          Tiket Belum Tersedia
+        </div>
+        <div class="stat-value text-yellow-400">
+          {{ stats.movie_belum_ada_tiket }}
+        </div>
+      </div>
+      <div class="stat bg-black shadow rounded-lg border border-gray-800">
+        <div class="stat-title text-gray-300">
+          Pendapatan
+        </div>
+        <div class="stat-value text-cyan-400">
+          Rp {{ new Intl.NumberFormat('id-ID').format(stats.total_pendapatan) }}
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Toast -->
+    @if(flashMessages && flashMessages.has && flashMessages.has('message'))
+      <div class="toast toast-end z-50">
+        <div class="alert alert-success bg-green-900 border-green-700 text-green-100">
+          <span>{{ flashMessages.get('message') }}</span>
+        </div>
+      </div>
+    @endif
+    @if(flashMessages && flashMessages.has && flashMessages.has('error'))
+      <div class="toast toast-end z-50">
+        <div class="alert alert-error bg-red-900 border-red-700 text-red-100">
+          <span>{{ flashMessages.get('error') }}</span>
+        </div>
+      </div>
+    @endif
+    
+    <!-- Filter -->
+    <div class="bg-black rounded-lg shadow p-6 mb-6 border border-gray-800">
+      <h2 class="text-xl font-semibold mb-4 text-white">
+        Filter Jadwal
+      </h2>
+      <form method="GET" action="/tiket" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div class="form-control">
+          <label class="label font-medium text-gray-300">Cari</label>
+          <input
+            type="text"
+            name="search"
+            value="{{ search }}"
+            placeholder="Film, sutradara, atau studio..."
+            class="input input-bordered w-full bg-gray-900 border-gray-700 text-white placeholder-gray-400"
+          />
+        </div>
+        <div class="form-control">
+          <label class="label font-medium text-gray-300">Genre</label>
+          <select name="genre_filter" class="select select-bordered w-full bg-gray-900 border-gray-700 text-white">
+            <option value="">
+              Semua Genre
+            </option>
+            @each(genre in genres)
+              <option value="{{ genre.id }}" {{ genre_filter == genre.id ? 'selected' : '' }}>
+                {{ genre.nama_genre }}
+              </option>
+            @endeach
+          </select>
+        </div>
+        <div class="form-control">
+          <label class="label font-medium text-gray-300">Tanggal</label>
+          <input
+            type="date"
+            name="tanggal_filter"
+            value="{{ tanggal_filter }}"
+            class="input input-bordered w-full bg-gray-900 border-gray-700 text-white"
+          />
+        </div>
+        <div class="form-control">
+          <label class="label font-medium text-gray-300">Status Tiket</label>
+          <select
+            name="status_filter"
+            class="select select-bordered w-full bg-gray-900 border-gray-700 text-white"
+          >
+            <option value="">
+              Semua Status
+            </option>
+            <option value="belum_ada_tiket" {{ status_filter == 'belum_ada_tiket' ? 'selected' : '' }}>
+              Belum Ada Tiket
+            </option>
+            <option value="tersedia" {{ status_filter == 'tersedia' ? 'selected' : '' }}>
+              Tersedia (&gt;10 tiket)
+            </option>
+            <option value="terbatas" {{ status_filter == 'terbatas' ? 'selected' : '' }}>
+              Terbatas (≤10 tiket)
+            </option>
+            <option value="hampir_habis" {{ status_filter == 'hampir_habis' ? 'selected' : '' }}>
+              Hampir Habis (≤5 tiket)
+            </option>
+            <option value="sold_out" {{ status_filter == 'sold_out' ? 'selected' : '' }}>
+              Sold Out (0 tiket)
+            </option>
+
+          </select>
+        </div>
+        <div class="form-control flex flex-row gap-2 items-end justify-end">
+          <button
+            type="submit"
+            class="btn btn-outline btn-primary w-1/2 border-gray-700 text-gray-300 hover:bg-gray-800"
+          >Filter</button>
+          <button
+            onclick="resetFilters()"
+            class="btn btn-outline btn-warning border-gray-700 w-1/2 text-gray-300 hover:bg-gray-800"
+          >Reset</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Jadwal Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+      @each(jadwal in jadwals.data)
+        <div class="card bg-black shadow-lg border border-gray-800">
+          <div class="card-body p-0">
+            <div class="p-4 pb-0">
+              <h3 class="card-title text-lg font-bold text-white mb-2">
+                {{ jadwal.film.judul || 'Film tidak ditemukan' }}
+              </h3>
+              <div class="flex flex-row-reverse items-center gap-2 mb-2 justify-between">
+                <span class="badge badge-outline border-blue-400 text-blue-400">{{ jadwal.film.genre.nama_genre || 'Unknown' }}</span>
+                <span class="badge badge-ghost bg-gray-800 text-gray-300">{{ jadwal.film.tahun || 'N/A' }}</span>
+              </div>
+              <p class="text-sm text-gray-400">
+                Sutradara: {{ jadwal.film.sutradara || 'Unknown' }}
+              </p>
+              <p class="text-gray-400 mt-2">
+                @if(jadwal.harga > 0)
+                  <span class="font-semibold text-lg text-white">Rp {{ new Intl.NumberFormat('id-ID').format(jadwal.harga) }}</span>
+                @else
+                  <span class="font-semibold text-lg text-gray-500">Belum ada harga</span>
+                @endif
+              </p>
+            </div>
+            <div class="bg-gray-900 h-full p-4 border-t-2 border-gray-700">
+              <div class="grid grid-cols-2 gap-4 text-sm mb-4">
+                <div>
+                  <span class="text-gray-400">Tanggal:</span>
+                  <p class="font-semibold text-white">
+                    {{ jadwal.tanggal || 'N/A' }}
+                  </p>
+                </div>
+                <div>
+                  <span class="text-gray-400">Jam:</span>
+                  <p class="font-semibold text-white">
+                    {{ jadwal.jam || 'N/A' }}
+                  </p>
+                </div>
+                <div>
+                  <span class="text-gray-400">Studio:</span>
+                  <p class="font-semibold text-white">
+                    {{ jadwal.studio.nama_studio || 'Unknown' }}
+                  </p>
+                </div>
+                <div>
+                  <span class="text-gray-400">Kapasitas:</span>
+                  <p class="font-semibold text-white">
+                    {{ jadwal.studio.kapasitas || 0 }} kursi
+                  </p>
+                </div>
+              </div>
+
+              <!-- Progress Tiket -->
+              @if(jadwal.totalTiket > 0)
+                <div class="mb-4">
+                  <div class="flex justify-between text-sm mb-1">
+                    <span class="text-gray-400">Tiket Tersedia</span>
+                    <span class="text-white">{{ jadwal.tersedia }}/{{ jadwal.totalTiket }}</span>
+                  </div>
+                  <progress class="progress {{ jadwal.progressColor }} w-full" value="{{ jadwal.progress }}" max="100">
+                  </progress>
+                </div>
+              @else
+                <div class="mb-4">
+                  <div class="text-center text-gray-400 text-sm">
+                    <p>
+                      Belum ada tiket dibuat
+                    </p>
+                    <p>
+                      Klik "Buat Tiket" untuk memulai
+                    </p>
+                  </div>
+                </div>
+              @endif
+              
+              <!-- Status & Action -->
+              <div class="flex justify-between items-center">
+                <span class="badge {{ jadwal.statusClass }}">{{ jadwal.statusLabel }}</span>
+
+                @if(jadwal.totalTiket === 0)
+                  <!-- Belum ada tiket, tombol untuk buat tiket -->
+                  <button
+                    onclick="openModalWithJadwal({{ jadwal.id }}, '{{ jadwal.film.judul }}', '{{ jadwal.tanggal }}', '{{ jadwal.jam }}', '{{ jadwal.studio.nama_studio }}')"
+                    class="btn btn-success btn-sm"
+                  >
+                    Buat Tiket
+                </button>
+                @elseif(jadwal.tersedia > 0)
+                  <!-- Ada tiket tersedia, tombol beli -->
+                  <form method="POST" action="/tiket/{{ jadwal.id }}/buy" style="display: inline;">
+                    {{ csrfField() }}
+                  <button type="submit" class="btn btn-primary btn-sm">Beli Tiket</button>
+                  </form>
+                @else
+                  <!-- Sold out -->
+                  <button class="btn btn-disabled btn-sm">Sold Out</button>
+                @endif
+              </div>
+            </div>
+          </div>
+        </div>
+      @else
+        <div class="col-span-full">
+          <div class="text-center py-12">
+            <h3 class="text-xl font-semibold text-gray-600 mb-2">
+              Tidak ada jadwal ditemukan
+            </h3>
+            <p class="text-gray-500 mb-4">
+              Coba ubah filter atau tanggal untuk melihat jadwal lainnya
+            </p>
+          </div>
+        </div>
+      @endeach
+    </div>
+
+    <!-- Pagination -->
+    @if(jadwals.lastPage > 1)
+      <div class="flex justify-center mt-6 gap-2">
+        @if(jadwals.hasPrevPage)
+          <a href="/tiket?page={{ jadwals.prevPage }}" class="btn btn-outline">‹ Prev</a>
+        @endif
+        <span class="btn btn-primary">{{ jadwals.currentPage }}</span>
+        @if(jadwals.hasNextPage)
+          <a href="/tiket?page={{ jadwals.nextPage }}" class="btn btn-outline">Next ›</a>
+        @endif
+      </div>
+    @endif
+    
+    <!-- Modal Tambah Tiket -->
+    <dialog id="tiketModal" class="modal">
+      <div class="modal-box w-11/12 max-w-2xl bg-black border border-gray-800">
+        <h3 class="font-bold text-lg mb-4 text-white">
+          Buat Tiket untuk Jadwal
+        </h3>
+        <form method="POST" action="/tiket/create">
+          {{ csrfField() }}
+          <div class="form-control w-full mb-4">
+            <label class="label">
+              <span class="label-text font-medium text-gray-300">Pilih Jadwal</span>
+            </label>
+            <select
+              name="jadwal_tayang_id"
+              id="jadwal_select"
+              class="select select-bordered w-full bg-gray-900 border-gray-700 text-white"
+              required
+            >
+              <option value="">
+                Pilih Jadwal
+              </option>
+              @each(jadwal in availableJadwals)
+                <option value="{{ jadwal.id }}">
+                  {{ jadwal.film?.judul || 'Unknown' }} - {{ jadwal.tanggal }} {{ jadwal.jam }} ({{ jadwal.studio?.nama_studio || 'Unknown' }})
+                </option>
+              @endeach
+            </select>
+          </div>
+          <div class="form-control w-full mb-4">
+            <label class="label">
+              <span class="label-text font-medium text-gray-300">Harga Tiket</span>
+            </label>
+            <input
+              type="number"
+              name="harga"
+              placeholder="50000"
+              class="input input-bordered w-full bg-gray-900 border-gray-700 text-white"
+              min="10000"
+              max="200000"
+              required
+            />
+          </div>
+          <div class="modal-action">
+            <button type="button" onclick="closeModal()" class="btn btn-ghost">Batal</button>
+            <button type="submit" class="btn btn-primary">Buat Tiket</button>
+          </div>
+        </form>
+      </div>
+      <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+      </form>
+    </dialog>
+
+    <script>
+      function openModal() {
+        document.getElementById("tiketModal").showModal();
+      }
+      
+      function openModalWithJadwal(jadwalId, filmJudul, tanggal, jam, studio) {
+        document.getElementById("tiketModal").showModal();
+        document.getElementById("jadwal_select").value = jadwalId;
+      }
+      
+      function closeModal() {
+        document.getElementById("tiketModal").close();
+      }
+      // Fungsi reset filter
+      
+      function resetFilters() {
+        // Reset semua input dalam form
+        document.querySelector('input[name="search"]').value = "";
+        document.querySelector('select[name="genre_filter"]').value = "";
+        document.querySelector('input[name="tanggal_filter"]').value = "";
+        document.querySelector('select[name="status_filter"]').value = "";
+        // Submit form untuk reload data
+        window.location.href = "/tiket";
+      }
+    </script>
+  @endslot
+@end

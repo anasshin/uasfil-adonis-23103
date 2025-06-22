@@ -21,7 +21,11 @@
 
   </head>
   <body>
-    @!component('components/nav')
+    @if(showNavbar !== false)
+      <!-- Navbar component -->
+      {{-- @include('components/navbar') --}}
+      @!component('components/nav')
+    @endif
     <div class="container mx-auto">
       {{{ await $slots.main() }}}
     </div>
